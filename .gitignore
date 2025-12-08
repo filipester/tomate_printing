@@ -1,0 +1,31 @@
+# PyInstaller
+/dist/
+/build/
+*.spec
+
+# PDFs and big generated files
+*.pdf
+*.exe
+*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments (if you use one)
+venv/
+env/
+.venv/
+
+# IDE / Editor junk
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+
+# OS garbage
+Thumbs.db
+.DS_Store
