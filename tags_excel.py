@@ -21,12 +21,13 @@ if not BASE_FILE.exists():
     raise FileNotFoundError(f"Arquivo não encontrado: {BASE_FILE.name}")
 
 try:
-    base_df = pd.read_excel(BASE_FILE)
+    base_df = pd.read_excel(BASE_FILE, dtype={"Produto": str})
 except Exception as e:
     raise ValueError(f"Erro ao ler {BASE_FILE.name}: {e}")
 
+base_df["Produto"] = base_df["Produto"].str.zfill(8)
 # Verifica se as colunas necessárias existem
-required_base_cols = ["COD.PRODUTO", "QTD.EMBALAGEM"]
+required_base_cols = ["Produto", "Qtd.Embalagem"]
 missing_cols = [col for col in required_base_cols if col not in base_df.columns]
 if missing_cols:
     raise ValueError(f"Colunas faltando em base_quantities.xlsx: {missing_cols}")
@@ -63,13 +64,6 @@ def parse_description(desc):
 # Define regex patterns
 pad_romaneio = r'^\d+\s+\d+\s+(\d+)\s+(.*?)\s+(\d{1,3}(?:,\d{1,4})?)$'
 pad_orcamento = r'^\d+\s+(\d+)\s+(GRAMPO.*?)\s+PC\s+(\d{1,3}(?:,\d{1,4})?)(?:\s+.*)?$'
-
-# Materials mapping
-materiais  = {
-    "M 30": "30", "M 27": "27", "M 24": "22,65", "7/8\"": "21", "M 22": "20,30",
-    "M 20": "18,31", "3/4\"": "17,97", "M 18": "17", "5/8\"": "15", "5/8\" UNC": "14,28", "9/16\"": "13,30",
-    "1/2\"": "11,84"
-}
 
 # Extraindo o PDF
 with pdfplumber.open(input_file) as pdf:
@@ -129,9 +123,103 @@ for page_num, page_lines in lines_by_page:
 
 # Create DataFrame
 ordem_prod = pd.DataFrame(data, columns=["Produto", "Descrição", "Qtd."])
-
+# print(ordem_prod.head(20))
 # Cria dicionário: código → capacidade por embalagem (com fallback para 10)
-capacidade_por_produto = ordem_prod.set_index("COD.PRODUTO")["QTD.EMBALAGEM"].to_dict()
+base_df["Produto"] = base_df["Produto"].astype(str).str.strip()
+capacidade_por_produto = base_df.set_index("Produto")["Qtd.Embalagem"].to_dict()
+
+# print(capacidade_por_produto)
 
 print(f"Base de embalagens carregada: {len(capacidade_por_produto)} produtos definidos.")
 print("Produtos sem capacidade definida usarão 10 peças por caixa.\n")
+
+# ============================== EXPAND TO ONE ROW PER BOX ==============================
+print("Gerando linhas por caixa...")
+
+pacotes_linhas = []
+
+for _, row in ordem_prod.iterrows():
+    codigo = row["Produto"]
+    descricao = row["Descrição"]
+    qtd_total = int(float(row["Qtd."]))
+
+    # Get box capacity from the base file (fallback to 10)
+    capacidade = int(float(capacidade_por_produto.get(codigo, 10)))
+
+    # Calculate how many boxes we need
+    caixas_cheias = qtd_total // capacidade
+    resto = qtd_total % capacidade
+    total_caixas = caixas_cheias + (1 if resto > 0 else 0)
+
+    # Create one row for each box
+    for i in range(1, total_caixas + 1):
+        qtd_na_caixa = capacidade if i <= caixas_cheias else resto
+        caixa_label = f"{i}/{total_caixas}"
+
+        pacotes_linhas.append({
+            "Cliente": client_name or "NÃO IDENTIFICADO",
+            "Pedido": pedido or "NÃO IDENTIFICADO",
+            "Produto": codigo,
+            "Descrição": descricao,
+            "Caixa": caixa_label,
+            "Qtd. na Caixa": qtd_na_caixa,
+            "Qtd. Total": qtd_total,
+            "Capacidade": capacidade
+        })
+
+# Convert to final DataFrame
+df_pacotes = pd.DataFrame(pacotes_linhas)
+
+print(f"Expansão concluída: {len(df_pacotes)} caixas geradas a partir de {len(ordem_prod)} produtos.\n")
+
+
+# ============================== SAVE FINAL EXCEL ==============================
+print("Salvando arquivo Excel final...")
+
+# Reorder columns exactly how you want them
+colunas_finais = [
+    "Cliente",
+    "Pedido",
+    "Produto",
+    "Descrição",
+    "Caixa",
+    "Qtd. na Caixa",
+]
+
+df_final = df_pacotes[colunas_finais]
+
+# Generate timestamped filename
+timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+output_file = Path(f"Etiquetas Pedido {pedido} Data {timestamp}.xlsx")
+
+# Save with formatting
+with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+    df_final.to_excel(writer, index=False, sheet_name="Pacotes")
+    
+    # Get the workbook and worksheet
+    workbook = writer.book
+    worksheet = writer.sheets["Pacotes"]
+    
+    # Auto-adjust column widths
+    for column in worksheet.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    # Freeze header row and bold it
+    worksheet.freeze_panes = 'A2'
+    for cell in worksheet[1]:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+
+print(f"\nPRONTO!")
+print(f"   → {len(df_final)} caixas geradas")
+print(f"   → Arquivo salvo: {output_file.name}")
+print(f"   → Local: {output_file.resolve()}\n")
