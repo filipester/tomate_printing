@@ -64,7 +64,7 @@ lines = all_text.split("\n")
 # ============================================================
 
 pad_romaneio = r'^\d+\s+\d+\s+(\d+)\s+(.*?)\s+(\d{1,3}(?:,\d{1,4})?)$'
-pad_orcamento = r'^\d+\s+(\d+)\s+(GRAMPO.*?)\s+PC\s+(\d{1,3}(?:,\d{1,4})?)'
+pad_pedido = r'^\s*\d+\s+(\d+)\s+(.+?)\s+(?:PC|UN|CT|JG|KG|LT|PAR|MT)\s+([\d.,]+)'
 
 # ============================================================
 # EXTRACT CLIENT AND PEDIDO
@@ -85,7 +85,7 @@ for line in lines:
         pedido = m.group(1)
 
     # Pedido implícito via tabela
-    elif re.search(pad_romaneio, line) or re.search(pad_orcamento, line):
+    elif re.search(pad_romaneio, line) or re.search(pad_pedido, line):
         pedido_values.add(line.split()[0])
 
 # Fallback
@@ -105,7 +105,7 @@ for page_num, page_lines in lines_by_page:
         if m := re.search(pad_romaneio, line):
             produto, descricao, qtd = m.groups()
 
-        elif m := re.search(pad_orcamento, line):
+        elif m := re.search(pad_pedido, line):
             produto, descricao, qtd = m.groups()
 
         else:
