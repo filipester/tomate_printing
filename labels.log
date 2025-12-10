@@ -23,3 +23,17 @@ Processing 2 labels from Imprimir Etiqueta de Pallet.xlsx
 Label 1: Setting line width to 3
 Label 2: Setting line width to 3
 Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_20251001_151230.pdf
+Processing 150 labels from Etiquetas Pedido 3868 Data 20251209_1023.xlsx
+Failed to generate PDF: 'Descriçao'
+Processing 150 labels from Etiquetas Pedido 3868 Data 20251209_1023.xlsx
+Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_pacotes_20251209_105734.pdf
+Processing 150 labels from Etiquetas Pedido 3868 Data 20251209_1023.xlsx
+Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_pacotes_20251209_110334.pdf
+Processing 150 labels from Etiquetas Pedido 3868 Data 20251209_1023.xlsx
+Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_pacotes_20251209_110535.pdf
+Processing 5 labels from Etiquetas Pedido 3868 Data 20251209_1023.xlsx
+Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_pacotes_20251209_110934.pdf
+Processing 19 labels from Etiquetas Pedido 3822 Data 20251210_1329.xlsx
+Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_pacotes_20251210_133038.pdf
+Processing 19 labels from Etiquetas Pedido 3822 Data 20251210_1329.xlsx
+Generated PDF: C:\Users\filip\Documents\Coding\Tomate_Printing\etiquetas_pacotes_20251210_133116.pdf
