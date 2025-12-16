@@ -12,9 +12,11 @@ import os
 # Configure logging
 logging.basicConfig(filename='labels.log', level=logging.DEBUG, format='%(message)s')
 
+company_name = "CIMEPARTS"
+
 DEFAULT_CONFIG = {
-    "page_width": 100 * mm,
-    "page_height": 150 * mm,
+    "page_width": 150 * mm,
+    "page_height": 100 * mm,
     "start_y": 80 * mm,
     "line_spacing": 5 * mm,
     "large_spacing": 10 * mm,
@@ -52,67 +54,81 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
 
     # Load Excel file
     try:
-        df = pd.read_excel(excel_file)
+        tags_dataframe = pd.read_excel(excel_file, dtype={"Produto": str})
     except FileNotFoundError:
         raise FileNotFoundError(f"Arquivo excel não encontrado: {excel_file}")
     except Exception as e:
         raise ValueError(f"Leitura do arquivo excel falhou: {str(e)}")
 
-    if df.empty:
+    if tags_dataframe.empty:
         raise ValueError("Arquivo excel está vazio.")
 
     # Check required columns
-    required_cols = ["Cliente", "Descrição", "Produto", "Produto", "Caixa", "Qtd. na Caixa"]
+    required_cols = ["Cliente", "Descrição", "Produto", "Caixa", "Qtd. na Caixa"]
     for col in required_cols:
-        if col not in df.columns:
+        if col not in tags_dataframe.columns:
             raise ValueError(f"Colunas faltando no arquivo: {col}")
-        if df[col].isna().any():
-            raise ValueError(f"Coluna {col} está vazia.")
+        if tags_dataframe[col].isna().all():
+            raise ValueError(f"Coluna obrigatória '{col}' está completamente vazia.")
 
     # Log dataset size
-    logging.debug(f"Processing {len(df)} labels from {excel_file}")
-    if len(df) > 1000:
-        logging.warning(f"Large dataset ({len(df)} rows) may increase processing time.")
+    logging.debug(f"Processing {len(tags_dataframe)} labels from {excel_file}")
+    if len(tags_dataframe) > 1000:
+        logging.warning(f"Large dataset ({len(tags_dataframe)} rows) may increase processing time.")
 
     # Convert dataframe to list of dicts
-    labels = df.to_dict(orient="records")
+    labels = tags_dataframe.to_dict(orient="records")
 
     # Default output filename
-    output_path = Path(output_file if output_file else f"etiquetas_pacotes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+    output_path = Path(output_file if output_file else f"etiquetas_pedido_{tags_dataframe["Pedido"].iloc[0]}_{datetime.now().strftime('%y%m%d_%H%M')}.pdf")
 
     # Setup PDF
     try:
         c = canvas.Canvas(str(output_path), pagesize=landscape((config["page_width"], config["page_height"])))
-        
-        for i, label in enumerate(labels, 1):
-            # Save canvas state
+        company_name = "CIMEPARTS"
+        header_font = ("Helvetica-Bold", 18)
+
+        for label in labels:
             c.saveState()
-            
+
+            c.setFont(*header_font)
             y = config["start_y"]
-            # Draw wrapped text fields
+            text_width = c.stringWidth(company_name, *header_font)
+            x_centered = (config["page_width"] - text_width) / 2
+            c.drawString(x_centered, y, company_name)
+
+            line_y = y - 3 * mm
+            c.setLineWidth(1.5)
+            c.line(5 * mm, line_y, config["page_width"] - 5 * mm, line_y)
+            y = line_y - config["large_spacing"]
+
             y = draw_wrapped_text(c, label["Cliente"], 10 * mm, y, "Cliente", config["text_widths"]["Cliente"], *config["font_title"])
             y = draw_wrapped_text(c, label["Descrição"], 10 * mm, y - config["line_spacing"], "Descrição", config["text_widths"]["Descrição"], *config["font_body"])
+
             y -= config["line_spacing"]
             c.setFont(*config["font_body"])
-            c.drawString(10 * mm, y, f"Produto: 0{str(label['Produto']).upper()}")
+            c.drawString(10 * mm, y, f"Produto: {str(label['Produto']).zfill(8).upper()}")
+
             y -= config["large_spacing"]
-            c.drawString(10 * mm, y, f"Pedido: {str(label['Pedido']).upper()}")
-            # c.drawString(10 * mm, y, f"Nota Fiscal: 2.397") # temporario, alterar
+            c.drawString(10 * mm, y, f"Pedido: {label['Pedido']}")
+
             y -= config["large_spacing"]
-            c.drawString(10 * mm, y, f"Pacote: {str(label['Caixa'])}")
+            c.drawString(10 * mm, y, f"Pacote: {label['Caixa']}")
+
             y -= config["large_spacing"]
-            c.drawString(10 * mm, y, f"Qtd: {str(label['Qtd. na Caixa']).upper()}")
-            
-            # Restore canvas state
+            c.drawString(10 * mm, y, f"Qtd: {label['Qtd. na Caixa']}")
+
             c.restoreState()
             c.showPage()
 
         c.save()
+
+    except Exception as e:
+        raise RuntimeError(f"Erro ao gerar PDF: {e}")
+
+    else:
         print(f"PDF gerado com sucesso: {output_path.resolve()}")
         logging.debug(f"Generated PDF: {output_path.resolve()}")
-    except Exception as e:
-        logging.error(f"Failed to generate PDF: {str(e)}")
-        raise
 
 if __name__ == "__main__":
     # Pattern: files starting with "Etiquetas Pedido" and ending with .xlsx
