@@ -54,7 +54,7 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
 
     # Load Excel file
     try:
-        tags_dataframe = pd.read_excel(excel_file, dtype={"Produto": str})
+        tags_dataframe = pd.read_excel(excel_file, dtype={"Produto": str, "Pedido": str, "Qtd. na Caixa": int})
     except FileNotFoundError:
         raise FileNotFoundError(f"Arquivo excel não encontrado: {excel_file}")
     except Exception as e:
