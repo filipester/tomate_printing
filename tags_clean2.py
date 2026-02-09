@@ -20,8 +20,7 @@ def main():
     # Files aquisition
     app_dir = get_app_dir()
 
-    script_dir = Path(__file__).parent
-    pdf_files = list(script_dir.glob("*.pdf"))
+    pdf_files = list(app_dir.glob("*.pdf"))
 
     if not pdf_files:
         raise FileNotFoundError("Nenhum arquivo PDF encontrado na pasta do aplicativo.")
