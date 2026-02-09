@@ -6,13 +6,10 @@ from pathlib import Path
 from datetime import datetime
 from openpyxl.styles import Alignment, Font
 
-def resource_path(relative_path):
+def get_app_dir() -> Path:
     if getattr(sys, 'frozen', False):
-        # Running as bundled exe
-        return Path(sys._MEIPASS) / relative_path
-    else:
-        # Running as script
-        return Path(__file__).parent / relative_path
+        return Path(sys.executable).parent
+    return Path(__file__).parent
 
 # Regx Patterns
 
@@ -21,6 +18,8 @@ pad_pedido = r'^\s*\d+\s+(\d+)\s+(.+?)\s+(?:PC|UN|CT|JG|KG|LT|PAR|MT)\s+([\d.,]+
 
 def main():
     # Files aquisition
+    app_dir = get_app_dir()
+
     script_dir = Path(__file__).parent
     pdf_files = list(script_dir.glob("*.pdf"))
 
@@ -30,7 +29,8 @@ def main():
     input_file = pdf_files[0]
     romaneio = input_file.stem
 
-    BASE_FILE = resource_path("base_quantities.xlsx")
+    BASE_DIR = app_dir / "BASE"
+    BASE_FILE = BASE_DIR / "base_quantities.xlsx"
     if not BASE_FILE.exists():
         raise FileNotFoundError(f"Arquivo não encontrado: {BASE_FILE.name}")
 
