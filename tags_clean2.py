@@ -1,9 +1,19 @@
+import sys
 import pdfplumber
 import re
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
 from openpyxl.styles import Alignment, Font
+
+
+def resource_path(relative_path):
+    if getattr(sys, 'frozen', False):
+        # Running as bundled exe
+        return Path(sys._MEIPASS) / relative_path
+    else:
+        # Running as script
+        return Path(__file__).parent / relative_path
 
 # ============================================================
 # INITIAL SETUP
@@ -18,7 +28,7 @@ if not pdf_files:
 input_file = pdf_files[0]
 romaneio = input_file.stem
 
-BASE_FILE = Path("base_quantities.xlsx")
+BASE_FILE = resource_path("base_quantities.xlsx")
 if not BASE_FILE.exists():
     raise FileNotFoundError(f"Arquivo não encontrado: {BASE_FILE.name}")
 
