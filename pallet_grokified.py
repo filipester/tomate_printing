@@ -1,3 +1,4 @@
+import sys
 from reportlab.lib.pagesizes import landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
@@ -51,6 +52,32 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
     # Use default config if none provided
     config = config or DEFAULT_CONFIG
 
+    # Convert string to Path object
+    excel_path = Path(excel_file)
+
+    # ==================== CREATE TEMPLATE IF FILE DOESN'T EXIST ====================
+    if not excel_path.exists():
+        print(f"⚠️  File not found: {excel_path.name}")
+        print("Creating a boilerplate template for you...\n")
+
+        # Create template with correct columns and examples
+        template = pd.DataFrame(columns=[
+            "Cliente", 
+            "Rua", 
+            "Bairro", 
+            "Cidade", 
+            "NF", 
+            "Transportadora"
+        ])
+
+        template.to_excel(excel_path, index=False)
+
+        print(f"✅ Arquivo criado com sucesso: {excel_path.name}")
+        print("   Preencha o arquivo e rode o programa novamente.")
+        
+        input("\nAperte Enter para sair...")
+        sys.exit(0)   # Clean exit
+
     # Load Excel file
     try:
         df = pd.read_excel(excel_file)
@@ -61,6 +88,7 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
 
     if df.empty:
         raise ValueError("Arquivo excel está vazio.")
+        
 
     # Check required columns
     required_cols = ["Cliente", "Rua", "Bairro", "Cidade", "NF", "Transportadora"]
