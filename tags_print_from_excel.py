@@ -80,7 +80,7 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
     labels = tags_dataframe.to_dict(orient="records")
 
     # Default output filename
-    output_path = Path(output_file if output_file else f"etiquetas_pedido_{tags_dataframe["Pedido"].iloc[0]}_{datetime.now().strftime('%y%m%d_%H%M')}.pdf")
+    output_path = Path(output_file if output_file else f"etiquetas_pedido_{tags_dataframe['Pedido'].iloc[0]}_{datetime.now().strftime('%y%m%d_%H%M')}.pdf")
 
     # Setup PDF
     try:
