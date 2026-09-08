@@ -3,6 +3,9 @@
 /build/
 *.spec
 
+# Obsolete/superseded scripts
+/Obsoleto/
+
 # PDFs and big generated files
 *.pdf
 *.exe
