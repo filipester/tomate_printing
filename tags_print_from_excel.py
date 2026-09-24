@@ -54,7 +54,7 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
 
     # Load Excel file
     try:
-        tags_dataframe = pd.read_excel(excel_file, dtype={"Produto": str, "Pedido": str, "Qtd. na Caixa": int})
+        tags_dataframe = pd.read_excel(excel_file, dtype={"Produto": str, "Pedido": str})
     except FileNotFoundError:
         raise FileNotFoundError(f"Arquivo excel não encontrado: {excel_file}")
     except Exception as e:
@@ -68,8 +68,8 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
     for col in required_cols:
         if col not in tags_dataframe.columns:
             raise ValueError(f"Colunas faltando no arquivo: {col}")
-        if tags_dataframe[col].isna().all():
-            raise ValueError(f"Coluna obrigatória '{col}' está completamente vazia.")
+        if tags_dataframe[col].isna().any():
+            raise ValueError(f"Coluna obrigatória '{col}' está com valores vazios.")
 
     # Log dataset size
     logging.debug(f"Processing {len(tags_dataframe)} labels from {excel_file}")
@@ -88,35 +88,41 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
         company_name = "CIMEPARTS"
         header_font = ("Helvetica-Bold", 18)
 
-        for label in labels:
+        for i, label in enumerate(labels, 1):
             c.saveState()
 
-            c.setFont(*header_font)
-            y = config["start_y"]
-            text_width = c.stringWidth(company_name, *header_font)
-            x_centered = (config["page_width"] - text_width) / 2
-            c.drawString(x_centered, y, company_name)
+            try:
+                c.setFont(*header_font)
+                y = config["start_y"]
+                text_width = c.stringWidth(company_name, *header_font)
+                x_centered = (config["page_width"] - text_width) / 2
+                c.drawString(x_centered, y, company_name)
 
-            line_y = y - 3 * mm
-            c.setLineWidth(1.5)
-            c.line(5 * mm, line_y, config["page_width"] - 5 * mm, line_y)
-            y = line_y - config["large_spacing"]
+                line_y = y - 3 * mm
+                c.setLineWidth(1.5)
+                c.line(5 * mm, line_y, config["page_width"] - 5 * mm, line_y)
+                y = line_y - config["large_spacing"]
 
-            y = draw_wrapped_text(c, label["Cliente"], 10 * mm, y, "Cliente", config["text_widths"]["Cliente"], *config["font_title"])
-            y = draw_wrapped_text(c, label["Descrição"], 10 * mm, y - config["line_spacing"], "Descrição", config["text_widths"]["Descrição"], *config["font_body"])
+                y = draw_wrapped_text(c, label["Cliente"], 10 * mm, y, "Cliente", config["text_widths"]["Cliente"], *config["font_title"])
+                y = draw_wrapped_text(c, label["Descrição"], 10 * mm, y - config["line_spacing"], "Descrição", config["text_widths"]["Descrição"], *config["font_body"])
 
-            y -= config["line_spacing"]
-            c.setFont(*config["font_body"])
-            c.drawString(10 * mm, y, f"Produto: {str(label['Produto']).zfill(8).upper()}")
+                y -= config["line_spacing"]
+                c.setFont(*config["font_body"])
+                c.drawString(10 * mm, y, f"Produto: {str(label['Produto']).zfill(8).upper()}")
 
-            y -= config["large_spacing"]
-            c.drawString(10 * mm, y, f"Pedido: {label['Pedido']}")
+                y -= config["large_spacing"]
+                c.drawString(10 * mm, y, f"Pedido: {label['Pedido']}")
 
-            y -= config["large_spacing"]
-            c.drawString(10 * mm, y, f"Pacote: {label['Caixa']}")
+                y -= config["large_spacing"]
+                c.drawString(10 * mm, y, f"Pacote: {label['Caixa']}")
 
-            y -= config["large_spacing"]
-            c.drawString(10 * mm, y, f"Qtd: {label['Qtd. na Caixa']}")
+                qtd_na_caixa = label['Qtd. na Caixa']
+                qtd_display = str(int(qtd_na_caixa)) if float(qtd_na_caixa).is_integer() else str(qtd_na_caixa).replace(".", ",")
+                y -= config["large_spacing"]
+                c.drawString(10 * mm, y, f"Qtd: {qtd_display}")
+            except Exception as e:
+                logging.error(f"Falha ao gerar etiqueta {i} (Produto: {label.get('Produto', '?')}): {e}")
+                print(f"⚠️  Etiqueta {i} (Produto: {label.get('Produto', '?')}) falhou e ficou incompleta: {e}")
 
             c.restoreState()
             c.showPage()
@@ -131,15 +137,19 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=Non
         logging.debug(f"Generated PDF: {output_path.resolve()}")
 
 if __name__ == "__main__":
-    # Pattern: files starting with "Etiquetas Pedido" and ending with .xlsx
-    files = glob.glob("Etiquetas Pedido*.xlsx")
+    try:
+        # Pattern: files starting with "Etiquetas Pedido" and ending with .xlsx
+        files = glob.glob("Etiquetas Pedido*.xlsx")
 
-    # Filter out temporary Excel files (starting with ~)
-    files = [f for f in files if not os.path.basename(f).startswith("~")]
+        # Filter out temporary Excel files (starting with ~)
+        files = [f for f in files if not os.path.basename(f).startswith("~")]
 
-    if not files:
-        print("No matching Excel file found! (Expected: Etiquetas Pedido*.xlsx)")
-    else:
-        xlsx_file = files[0]  # First match
-        print(f"Using Excel file: {xlsx_file}")
-        generate_shipping_labels_from_excel(xlsx_file)
+        if not files:
+            print("No matching Excel file found! (Expected: Etiquetas Pedido*.xlsx)")
+        else:
+            xlsx_file = files[0]  # First match
+            print(f"Using Excel file: {xlsx_file}")
+            generate_shipping_labels_from_excel(xlsx_file)
+    except Exception as e:
+        print("\n❌ ERRO:", e)
+        input("\nPressione Enter para fechar...")

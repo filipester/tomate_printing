@@ -13,7 +13,7 @@ def get_app_dir() -> Path:
 
 # Regx Patterns
 
-pad_romaneio = r'^\d+\s+\d+\s+(\d+)\s+(.*?)\s+(\d{1,3}(?:,\d{1,4})?)$'
+pad_romaneio = r'^\d+\s+\d+\s+(\d+)\s+(.*?)\s+([\d.]+(?:,\d{1,4})?)$'
 pad_pedido = r'^\s*\d+\s+(\d+)\s+(.+?)\s+(?:PC|UN|CT|JG|KG|LT|PAR|MT)\s+([\d.,]+)'
 
 def main():
@@ -45,7 +45,7 @@ def main():
     if missing_cols:
         raise ValueError(f"Colunas faltando em base_quantities.xlsx: {missing_cols}")
 
-    base_df["Produto"] = base_df["Produto"].str.zfill(8).str.strip()
+    base_df["Produto"] = base_df["Produto"].str.strip().str.zfill(8)
     capacidade_por_produto = base_df.set_index("Produto")["Qtd.Embalagem"].to_dict()
 
     print(f"Base carregada: {len(capacidade_por_produto)} produtos definidos.")
@@ -107,7 +107,7 @@ def main():
             else:
                 continue
 
-            qtd_float = float(qtd.replace(",", "."))
+            qtd_float = float(qtd.replace(".", "").replace(",", "."))
             data.append([produto, descricao.strip(), qtd_float])
 
     ordem_prod = pd.DataFrame(data, columns=["Produto", "Descrição", "Qtd."])
@@ -122,15 +122,23 @@ def main():
 
         codigo = row["Produto"]
         descricao = row["Descrição"]
-        qtd_total = int(row["Qtd."])
+        qtd_total = float(row["Qtd."])
 
-        capacidade = int(capacidade_por_produto.get(codigo, 10))
-        caixas_cheias = qtd_total // capacidade
-        resto = qtd_total % capacidade
-        total_caixas = caixas_cheias + (resto > 0)
+        capacidade_valor = capacidade_por_produto.get(codigo)
+        if capacidade_valor is None or pd.isna(capacidade_valor):
+            print(f"Aviso: capacidade não definida para o produto {codigo}, usando padrão de 10 por caixa.")
+            capacidade = 10
+        else:
+            capacidade = int(capacidade_valor)
+
+        caixas_cheias = int(qtd_total // capacidade)
+        resto = round(qtd_total - caixas_cheias * capacidade, 4)
+        total_caixas = caixas_cheias + (1 if resto > 0 else 0)
 
         for i in range(1, total_caixas + 1):
             qtd_caixa = capacidade if i <= caixas_cheias else resto
+            if float(qtd_caixa).is_integer():
+                qtd_caixa = int(qtd_caixa)
             caixa_label = f"{i}/{total_caixas}"
 
             pacotes.append({

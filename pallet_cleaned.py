@@ -102,27 +102,31 @@ def generate_pdf(labels, output_path=None, config=DEFAULT_CONFIG):
     for i, label in enumerate(labels, 1):
         # Save canvas state
         c.saveState()
-        
-        # Set border thickness for each page
-        c.setLineWidth(config["border_thickness"])
-        logging.debug(f"Label {i}: Setting line width to {config['border_thickness']}")
-        
-        # Draw border
-        c.rect(config["border_margin"], config["border_margin"], config["border_width"], config["border_height"])
-        y = config["start_y"]
-        # Draw wrapped text fields
-        y = draw_wrapped_text(c, label["Cliente"], 10 * mm, y, "Cliente", config["text_widths"]["Cliente"], *config["font_title"])
-        y = draw_wrapped_text(c, label["Rua"], 10 * mm, y - config["line_spacing"], "Rua", config["text_widths"]["Rua"], *config["font_body"])
-        y -= config["line_spacing"]
-        c.setFont(*config["font_body"])
-        c.drawString(10 * mm, y, f"Bairro: {str(label['Bairro']).upper()}")
-        y -= config["large_spacing"]
-        c.drawString(10 * mm, y, f"Cidade: {str(label['Cidade']).upper()}")
-        y -= config["large_spacing"]
-        c.drawString(10 * mm, y, f"NF: {str(label['NF'])}")
-        y -= config["large_spacing"]
-        c.drawString(10 * mm, y, f"Transp: {str(label['Transportadora']).upper()}")
-        
+
+        try:
+            # Set border thickness for each page
+            c.setLineWidth(config["border_thickness"])
+            logging.debug(f"Label {i}: Setting line width to {config['border_thickness']}")
+
+            # Draw border
+            c.rect(config["border_margin"], config["border_margin"], config["border_width"], config["border_height"])
+            y = config["start_y"]
+            # Draw wrapped text fields
+            y = draw_wrapped_text(c, label["Cliente"], 10 * mm, y, "Cliente", config["text_widths"]["Cliente"], *config["font_title"])
+            y = draw_wrapped_text(c, label["Rua"], 10 * mm, y - config["line_spacing"], "Rua", config["text_widths"]["Rua"], *config["font_body"])
+            y -= config["line_spacing"]
+            c.setFont(*config["font_body"])
+            c.drawString(10 * mm, y, f"Bairro: {str(label['Bairro']).upper()}")
+            y -= config["large_spacing"]
+            c.drawString(10 * mm, y, f"Cidade: {str(label['Cidade']).upper()}")
+            y -= config["large_spacing"]
+            c.drawString(10 * mm, y, f"NF: {str(label['NF'])}")
+            y -= config["large_spacing"]
+            c.drawString(10 * mm, y, f"Transp: {str(label['Transportadora']).upper()}")
+        except Exception as e:
+            logging.error(f"Falha ao gerar etiqueta {i} (Cliente: {label.get('Cliente', '?')}): {e}")
+            print(f"⚠️  Etiqueta {i} (Cliente: {label.get('Cliente', '?')}) falhou e ficou incompleta: {e}")
+
         # Restore canvas state
         c.restoreState()
         c.showPage()
@@ -146,4 +150,8 @@ def generate_shipping_labels_from_excel(excel_file, output_file=None, config=DEF
         raise
 
 if __name__ == "__main__":
-    generate_shipping_labels_from_excel("Imprimir Etiqueta de Pallet.xlsx")
+    try:
+        generate_shipping_labels_from_excel("Imprimir Etiqueta de Pallet.xlsx")
+    except Exception as e:
+        print("\n❌ ERRO:", e)
+        input("\nPressione Enter para fechar...")
