@@ -3,6 +3,9 @@
 /build/
 *.spec
 
+# Versionador
+gerar_versão.py
+
 # Obsolete/superseded scripts
 /Obsoleto/
 
