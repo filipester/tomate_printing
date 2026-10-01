@@ -41,8 +41,8 @@ def load_excel(excel_file):
 
     # ==================== CREATE TEMPLATE IF FILE DOESN'T EXIST ====================
     if not excel_path.exists():
-        print(f"⚠️  File not found: {excel_path.name}")
-        print("Creating a boilerplate template for you...\n")
+        print(f"⚠️  Arquivo não encontrado: {excel_path.name}")
+        print("Criando um modelo em branco...\n")
 
         # Create template with correct columns and examples
         template = pd.DataFrame(columns=[
@@ -62,17 +62,17 @@ def load_excel(excel_file):
         return None   # Retorna nada para dar saída
 
     # Load Excel file
+    # Only the read itself goes in the try, so data checks below aren't mislabeled as read failures
     try:
         df = pd.read_excel(excel_file)
-        if df.empty:
-            raise ValueError("Arquivo excel está vazio.")
-        if df is None:
-            return None # encerra limpo
-        return df
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Arquivo excel não encontrado: {excel_file}")
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Arquivo excel não encontrado: {excel_file}") from e
     except Exception as e:
-        raise ValueError(f"Leitura do arquivo excel falhou: {str(e)}")
+        raise ValueError(f"Leitura do arquivo excel falhou: {str(e)}") from e
+
+    if df.empty:
+        raise ValueError("Arquivo excel está vazio.")
+    return df
 
 
 def validate_data(df):
