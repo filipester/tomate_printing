@@ -30,6 +30,9 @@ env/
 .venv/
 .venv-build/
 
+# Claude Code project notes (local only)
+CLAUDE.md
+
 # IDE / Editor junk
 .vscode/
 .idea/
